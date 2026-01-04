@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DailyMark - 每日印记生成器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            serif: ['"Noto Serif SC"', 'serif'],
+            sans: ['"Noto Sans SC"', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    .preview-card {
+      width: 360px;
+      min-height: 640px;
+      display: flex;
+      flex-direction: column;
+    }
+    @media (min-width: 768px) {
+      .preview-card {
+        width: 405px;
+        min-height: 720px;
+      }
+    }
+    /* 暖光主题 */
+    .theme-warm {
+      background: #fdfbf7;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+    }
+    .theme-warm .text-primary { color: #0f172a; }
+    .theme-warm .text-secondary { color: #334155; }
+    .theme-warm .text-muted { color: #94a3b8; }
+    .theme-warm .text-accent { color: #b45309; }
+    .theme-warm .border-color { border-color: rgba(15, 23, 42, 0.1); }
+    .theme-warm .bg-accent { background-color: #b45309; }
+    .theme-warm .decoration-top { background-color: #0f172a; }
+
+    /* 深夜主题 */
+    .theme-night {
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    }
+    .theme-night .text-primary { color: #f1f5f9; }
+    .theme-night .text-secondary { color: #cbd5e1; }
+    .theme-night .text-muted { color: #64748b; }
+    .theme-night .text-accent { color: #fbbf24; }
+    .theme-night .border-color { border-color: rgba(241, 245, 249, 0.15); }
+    .theme-night .bg-accent { background-color: #fbbf24; }
+    .theme-night .decoration-top { background-color: #f1f5f9; }
+
+    /* 樱花主题 */
+    .theme-sakura {
+      background: #fff1f2;
+      background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23fb7185' fill-opacity='0.05' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='3'/%3E%3Ccircle cx='13' cy='13' r='3'/%3E%3C/g%3E%3C/svg%3E");
+    }
+    .theme-sakura .text-primary { color: #881337; }
+    .theme-sakura .text-secondary { color: #9f1239; }
+    .theme-sakura .text-muted { color: #f43f5e; }
+    .theme-sakura .text-accent { color: #e11d48; }
+    .theme-sakura .border-color { border-color: rgba(225, 29, 72, 0.15); }
+    .theme-sakura .bg-accent { background-color: #e11d48; }
+    .theme-sakura .decoration-top { background-color: #be123c; }
+
+    /* 复古主题 */
+    .theme-vintage {
+      background: #fef3c7;
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d97706' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .theme-vintage .text-primary { color: #451a03; }
+    .theme-vintage .text-secondary { color: #78350f; }
+    .theme-vintage .text-muted { color: #b45309; }
+    .theme-vintage .text-accent { color: #92400e; }
+    .theme-vintage .border-color { border-color: rgba(120, 53, 15, 0.15); }
+    .theme-vintage .bg-accent { background-color: #92400e; }
+    .theme-vintage .decoration-top { background-color: #78350f; }
+
+    /* 森林主题 */
+    .theme-forest {
+      background: #f0fdf4;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    }
+    .theme-forest .text-primary { color: #14532d; }
+    .theme-forest .text-secondary { color: #166534; }
+    .theme-forest .text-muted { color: #86efac; }
+    .theme-forest .text-accent { color: #15803d; }
+    .theme-forest .border-color { border-color: rgba(22, 101, 52, 0.15); }
+    .theme-forest .bg-accent { background-color: #15803d; }
+    .theme-forest .decoration-top { background-color: #166534; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+  
+  <!-- 顶部导航 -->
+  <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-14">
+        <div class="flex items-center gap-2">
+          <div class="bg-slate-800 text-white p-1.5 rounded font-serif font-bold text-lg">日</div>
+          <span class="text-lg font-bold text-gray-900">DailyMark</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="exportImage()" id="exportBtn" class="inline-flex items-center px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-md shadow-sm transition-all">
+            <svg class="mr-2 -ml-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            导出图片
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- 主内容区 -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div class="flex flex-col lg:flex-row gap-6">
+      
+      <!-- 左侧编辑区 -->
+      <div class="w-full lg:w-5/12">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-5">
+          <h2 class="text-lg font-bold text-gray-800 border-b pb-3 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+            编辑内容
+          </h2>
+
+          <!-- 主题选择 -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-600">色彩主题</label>
+            <div class="grid grid-cols-5 gap-2">
+              <button onclick="setTheme('warm')" id="btnWarm" class="py-2 rounded-lg border-2 flex flex-col items-center justify-center gap-1 transition-all border-amber-600 bg-amber-50 text-amber-900">
+                <div class="w-4 h-4 rounded-full bg-[#fdfbf7] border border-gray-300"></div>
+                <span class="text-xs font-medium">暖光</span>
+              </button>
+              <button onclick="setTheme('night')" id="btnNight" class="py-2 rounded-lg border-2 flex flex-col items-center justify-center gap-1 transition-all border-gray-200 hover:border-slate-300">
+                <div class="w-4 h-4 rounded-full bg-[#1e293b]"></div>
+                <span class="text-xs font-medium">深夜</span>
+              </button>
+              <button onclick="setTheme('sakura')" id="btnSakura" class="py-2 rounded-lg border-2 flex flex-col items-center justify-center gap-1 transition-all border-gray-200 hover:border-pink-300">
+                <div class="w-4 h-4 rounded-full bg-[#fff1f2] border border-pink-300"></div>
+                <span class="text-xs font-medium">樱花</span>
+              </button>
+              <button onclick="setTheme('vintage')" id="btnVintage" class="py-2 rounded-lg border-2 flex flex-col items-center justify-center gap-1 transition-all border-gray-200 hover:border-amber-300">
+                <div class="w-4 h-4 rounded-full bg-[#fef3c7] border border-amber-500"></div>
+                <span class="text-xs font-medium">复古</span>
+              </button>
+              <button onclick="setTheme('forest')" id="btnForest" class="py-2 rounded-lg border-2 flex flex-col items-center justify-center gap-1 transition-all border-gray-200 hover:border-green-300">
+                <div class="w-4 h-4 rounded-full bg-[#f0fdf4] border border-green-400"></div>
+                <span class="text-xs font-medium">森林</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 日期 -->
+          <div class="space-y-1">
+            <label class="text-sm font-medium text-gray-600">日期</label>
+            <input type="date" id="inputDate" onchange="updatePreview()" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+          </div>
+
+          <!-- Day X -->
+          <div class="space-y-1">
+            <label class="text-sm font-medium text-gray-600">Day (可选，留空则不显示)</label>
+            <div class="flex gap-2">
+              <input type="number" id="inputDay" placeholder="如: 1" min="1" onchange="updatePreview()" class="flex-1 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+              <select id="inputMood" onchange="updatePreview()" class="px-2 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-xl cursor-pointer" title="今日心情">
+                <option value="">😐</option>
+                <option value="☀️">☀️</option>
+                <option value="🔥">🔥</option>
+                <option value="💪">💪</option>
+                <option value="🚀">🚀</option>
+                <option value="✨">✨</option>
+                <option value="🎯">🎯</option>
+                <option value="📚">📚</option>
+                <option value="💻">💻</option>
+                <option value="🌙">🌙</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 领域标签 -->
+          <div class="space-y-1">
+            <label class="text-sm font-medium text-gray-600">今日领域 (空格或逗号分隔)</label>
+            <input type="text" id="inputTags" placeholder="N8N 编程 AI" onchange="updatePreview()" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+          </div>
+
+          <!-- 今日内容 -->
+          <div class="space-y-1">
+            <label class="text-sm font-medium text-gray-600">今日内容 (# 开头为标题，每行一条)</label>
+            <textarea id="inputContent" rows="6" placeholder="# N8N自动化&#10;完成工作流配置&#10;添加了Webhook触发器&#10;&#10;# 编程学习&#10;学习了React Hooks" oninput="updatePreview()" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none font-mono text-sm leading-relaxed"></textarea>
+          </div>
+
+          <!-- 金句区域 -->
+          <div class="space-y-1">
+            <div class="flex justify-between items-center">
+              <label class="text-sm font-medium text-gray-600">今日金句</label>
+              <button onclick="generateQuote()" id="generateBtn" class="text-xs px-3 py-1 rounded-full bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                AI生成
+              </button>
+            </div>
+            <textarea id="inputQuote" rows="2" placeholder="输入或AI生成金句..." oninput="updatePreview()" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"></textarea>
+          </div>
+
+          <!-- 设置折叠区 -->
+          <details class="border rounded-md">
+            <summary class="px-3 py-2 bg-gray-50 cursor-pointer text-sm font-medium text-gray-600 hover:bg-gray-100">
+              高级设置
+            </summary>
+            <div class="p-3 space-y-3 border-t">
+              <!-- API 模式选择 -->
+              <div class="space-y-2">
+                <label class="text-sm font-medium text-gray-600">AI 服务</label>
+                <div class="flex gap-2">
+                  <button onclick="setApiMode('free')" id="btnModeFree" class="flex-1 py-2 px-3 rounded-lg border-2 text-xs font-medium transition-all border-green-500 bg-green-50 text-green-700">
+                    🎁 免费使用
+                  </button>
+                  <button onclick="setApiMode('custom')" id="btnModeCustom" class="flex-1 py-2 px-3 rounded-lg border-2 text-xs font-medium transition-all border-gray-200 hover:border-gray-300 text-gray-600">
+                    🔑 自定义 API
+                  </button>
+                </div>
+              </div>
+              
+              <!-- 自定义 API 配置（默认隐藏） -->
+              <div id="customApiConfig" class="hidden space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div>
+                  <label class="text-xs text-slate-500 mb-1 block font-medium">API 地址</label>
+                  <input type="text" id="inputApiBase" placeholder="https://api.openai.com" class="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                </div>
+                <div>
+                  <label class="text-xs text-slate-500 mb-1 block font-medium">API Key</label>
+                  <input type="password" id="inputApiKey" placeholder="sk-..." class="w-full px-3 py-2 border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                </div>
+                <button onclick="saveCustomApi()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg transition-all">
+                  保存配置
+                </button>
+                <p class="text-[10px] text-slate-400 text-center">配置仅保存在您的浏览器本地</p>
+                <!-- 模型选择（仅自定义模式显示） -->
+                <div class="space-y-1">
+                  <label class="text-xs text-slate-500 font-medium">AI模型</label>
+                  <select id="selectModel" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+                    <option value="">加载中...</option>
+                  </select>
+                </div>
+              </div>
+              <!-- 标题 -->
+              <div class="space-y-1">
+                <label class="text-sm font-medium text-gray-600">日报标题</label>
+                <input type="text" id="inputTitle" value="每日印记" placeholder="如: 每日印记" onchange="updatePreview()" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+              </div>
+              <!-- Slogan -->
+              <div class="space-y-1">
+                <label class="text-sm font-medium text-gray-600">底部Slogan</label>
+                <input type="text" id="inputSlogan" value="每日精进 日拱一卒" onchange="updatePreview()" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+              </div>
+              <!-- 底部版权 -->
+              <div class="space-y-1">
+                <label class="text-sm font-medium text-gray-600">底部版权文字</label>
+                <input type="text" id="inputCopyright" value="DailyMark" placeholder="如: DailyMark" onchange="updatePreview()" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm">
+              </div>
+            </div>
+          </details>
+
+        </div>
+        <p class="mt-3 text-sm text-gray-500 text-center">修改内容实时预览，点击右上角导出保存</p>
+      </div>
+
+      <!-- 右侧预览区 -->
+      <div class="w-full lg:w-7/12 bg-gray-200/50 rounded-2xl border border-gray-200 p-4 md:p-6 flex justify-center items-start min-h-[700px]">
+        <div class="preview-card rounded-sm shadow-2xl theme-warm" id="previewCard">
+          
+          <!-- 顶部装饰线 -->
+          <div class="h-2 decoration-top"></div>
+          
+          <!-- 内容区 -->
+          <div class="p-6 flex-1 flex flex-col font-serif">
+            
+            <!-- 头部：日期 + 标题 -->
+            <div class="border-b border-color pb-4 mb-4">
+              <div class="flex items-center gap-2 text-accent text-xs font-bold tracking-widest mb-1">
+                <span id="previewDate">2026.01.01</span>
+                <span class="w-px h-3 bg-current opacity-40"></span>
+                <span id="previewWeekday">周四</span>
+                <span id="previewDayWrapper" class="hidden">
+                  <span class="w-px h-3 bg-current opacity-40"></span>
+                  <span id="previewDay">Day 1</span>
+                </span>
+                <span id="previewMood" class="ml-1"></span>
+              </div>
+              <h1 class="text-3xl font-black tracking-wider text-primary">
+                <span id="previewTitle">每日印记</span><span class="text-accent">.</span>
+              </h1>
+            </div>
+
+            <!-- 标签 -->
+            <div class="flex flex-wrap gap-2 mb-5" id="previewTags">
+              <span class="px-2 py-0.5 border border-color text-xs font-medium rounded text-secondary">#N8N</span>
+              <span class="px-2 py-0.5 border border-color text-xs font-medium rounded text-secondary">#编程</span>
+            </div>
+
+            <!-- 内容列表 -->
+            <div class="py-2">
+              <ul class="space-y-4" id="previewContent">
+                <li class="mt-4 first:mt-0">
+                  <span class="text-base font-bold text-primary">N8N自动化</span>
+                </li>
+                <li class="flex items-baseline">
+                  <span class="mr-2 text-accent">·</span>
+                  <span class="text-base leading-relaxed text-secondary">完成工作流配置</span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- 底部区域：金句 + Slogan 绑定在一起 -->
+            <div class="mt-auto">
+              <!-- 金句区 -->
+              <div class="mt-4 relative">
+                <div class="absolute -top-4 -left-1 text-5xl text-accent opacity-20 font-serif leading-none select-none">"</div>
+                <div class="pl-4 border-l-2 border-color py-1">
+                  <p class="text-lg leading-loose text-primary" id="previewQuote">种一棵树最好的时间是十年前，其次是现在。</p>
+                  <div class="mt-1 text-xs text-accent opacity-60 uppercase tracking-widest font-bold">Daily Insight</div>
+                </div>
+              </div>
+
+              <!-- 底部Slogan -->
+              <div class="pt-6 flex items-center justify-center text-muted">
+                <div class="h-px bg-current w-6 mr-2"></div>
+                <span class="text-xs tracking-[0.2em] uppercase font-sans" id="previewSlogan">每日精进 日拱一卒</span>
+                <div class="h-px bg-current w-6 ml-2"></div>
+              </div>
+            </div>
+
+          </div>
+          
+          <!-- 底部装饰条 -->
+          <div class="h-3 border-t border-color border-opacity-5 flex justify-between px-4 items-center">
+            <span class="text-[10px] text-muted font-mono" id="previewCopyright">2026 © DailyMark</span>
+            <div class="flex gap-1">
+              <div class="w-1 h-1 rounded-full text-muted bg-current"></div>
+              <div class="w-1 h-1 rounded-full text-muted bg-current"></div>
+              <div class="w-1 h-1 rounded-full text-muted bg-current"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- 底部隐私声明 -->
+  <footer class="bg-white border-t border-gray-200 py-4 mt-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <p class="text-sm text-gray-500 flex items-center justify-center gap-2">
+        <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+        <span><strong>隐私安全</strong>：所有数据仅保存在您的浏览器本地，不会上传到任何服务器</span>
+      </p>
+      <p class="text-xs text-gray-400 mt-2">DailyMark © 2026 · 每日印记</p>
+    </div>
+  </footer>
+
+  <script>
+    // ========== 配置 ==========
+    // 双模式：免费使用代理 API 或 用户自定义 API
+    const API_PROXY_BASE = '/api';
+    let apiMode = 'free'; // 'free' 或 'custom'
+    let customApiBase = '';
+    let customApiKey = '';
+    let currentTheme = 'warm';
+
+    // ========== 初始化 ==========
+    document.addEventListener('DOMContentLoaded', () => {
+      // 设置今天日期
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('inputDate').value = today;
+      
+      // 加载保存的配置
+      loadSavedConfig();
+      
+      // 初始预览
+      updatePreview();
+    });
+
+    // ========== API 模式管理 ==========
+    function loadSavedConfig() {
+      const savedMode = localStorage.getItem('dailymark_api_mode');
+      const savedBase = localStorage.getItem('dailymark_api_base');
+      const savedKey = localStorage.getItem('dailymark_api_key');
+      
+      if (savedBase) {
+        customApiBase = savedBase;
+        document.getElementById('inputApiBase').value = savedBase;
+      }
+      if (savedKey) {
+        customApiKey = savedKey;
+        document.getElementById('inputApiKey').value = savedKey;
+      }
+      if (savedMode === 'custom' && savedBase && savedKey) {
+        setApiMode('custom');
+      } else {
+        setApiMode('free');
+      }
+    }
+
+    function setApiMode(mode) {
+      apiMode = mode;
+      localStorage.setItem('dailymark_api_mode', mode);
+      
+      const btnFree = document.getElementById('btnModeFree');
+      const btnCustom = document.getElementById('btnModeCustom');
+      const configPanel = document.getElementById('customApiConfig');
+      
+      if (mode === 'free') {
+        btnFree.className = 'flex-1 py-2 px-3 rounded-lg border-2 text-xs font-medium transition-all border-green-500 bg-green-50 text-green-700';
+        btnCustom.className = 'flex-1 py-2 px-3 rounded-lg border-2 text-xs font-medium transition-all border-gray-200 hover:border-gray-300 text-gray-600';
+        configPanel.classList.add('hidden');
+      } else {
+        btnFree.className = 'flex-1 py-2 px-3 rounded-lg border-2 text-xs font-medium transition-all border-gray-200 hover:border-gray-300 text-gray-600';
+        btnCustom.className = 'flex-1 py-2 px-3 rounded-lg border-2 text-xs font-medium transition-all border-blue-500 bg-blue-50 text-blue-700';
+        configPanel.classList.remove('hidden');
+        loadModels();
+      }
+    }
+
+    function saveCustomApi() {
+      const base = document.getElementById('inputApiBase').value.trim().replace(/\/$/, '');
+      const key = document.getElementById('inputApiKey').value.trim();
+      
+      if (!base || !key) {
+        alert('请填写完整的 API 地址和 Key');
+        return;
+      }
+      
+      customApiBase = base;
+      customApiKey = key;
+      localStorage.setItem('dailymark_api_base', base);
+      localStorage.setItem('dailymark_api_key', key);
+      
+      alert('✅ 配置已保存');
+      loadModels();
+    }
+
+    // ========== 主题切换 ==========
+    function setTheme(theme) {
+      currentTheme = theme;
+      const card = document.getElementById('previewCard');
+      card.className = card.className.replace(/theme-\w+/, `theme-${theme}`);
+      
+      // 更新按钮状态
+      const buttons = {
+        warm: document.getElementById('btnWarm'),
+        night: document.getElementById('btnNight'),
+        sakura: document.getElementById('btnSakura'),
+        vintage: document.getElementById('btnVintage'),
+        forest: document.getElementById('btnForest')
+      };
+      
+      const activeStyles = {
+        warm: 'py-2 rounded-lg border-2 flex flex-col items-center justify-center gap-1 transition-all border-amber-600 bg-amber-50 text-amber-900',
+        night: 'py-2 rounded-lg border-2 flex flex-col items-center justify-center gap-1 transition-all border-slate-600 bg-slate-100 text-slate-900',
+        sakura: 'py-2 rounded-lg border-2 flex flex-col items-center justify-center gap-1 transition-all border-pink-600 bg-pink-50 text-pink-900',
+        vintage: 'py-2 rounded-lg border-2 flex flex-col items-center justify-center gap-1 transition-all border-amber-700 bg-amber-50 text-amber-900',
+        forest: 'py-2 rounded-lg border-2 flex flex-col items-center justify-center gap-1 transition-all border-green-600 bg-green-50 text-green-900'
+      };
+      
+      const inactiveStyle = 'py-2 rounded-lg border-2 flex flex-col items-center justify-center gap-1 transition-all border-gray-200 hover:border-gray-300';
+      
+      Object.keys(buttons).forEach(key => {
+        buttons[key].className = key === theme ? activeStyles[key] : inactiveStyle;
+      });
+    }
+
+    // ========== 加载模型列表 ==========
+    async function loadModels() {
+      const select = document.getElementById('selectModel');
+      select.innerHTML = '<option value="">加载中...</option>';
+      
+      try {
+        let response;
+        if (apiMode === 'custom' && customApiBase && customApiKey) {
+          // 使用用户自定义 API
+          response = await fetch(`${customApiBase}/v1/models`, {
+            headers: { 'Authorization': `Bearer ${customApiKey}` }
+          });
+        } else {
+          // 使用免费代理 API
+          response = await fetch(`${API_PROXY_BASE}/models`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.data && Array.isArray(data.data)) {
+          select.innerHTML = '';
+          data.data.forEach((model, index) => {
+            const option = document.createElement('option');
+            option.value = model.id;
+            option.textContent = model.id;
+            if (index === 0) option.selected = true;
+            select.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('加载模型失败:', error);
+        select.innerHTML = '<option value="glm-4.7">glm-4.7 (默认)</option>';
+      }
+    }
+
+    // ========== 更新预览 ==========
+    function updatePreview() {
+      // 日期
+      const dateValue = document.getElementById('inputDate').value;
+      const dateObj = new Date(dateValue);
+      const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      document.getElementById('previewDate').textContent = dateValue.replace(/-/g, '.');
+      document.getElementById('previewWeekday').textContent = weekdays[dateObj.getDay()];
+
+      // Day X
+      const dayValue = document.getElementById('inputDay').value;
+      const dayWrapper = document.getElementById('previewDayWrapper');
+      if (dayValue && parseInt(dayValue) > 0) {
+        dayWrapper.classList.remove('hidden');
+        dayWrapper.classList.add('flex', 'items-center', 'gap-2');
+        document.getElementById('previewDay').textContent = `Day ${dayValue}`;
+      } else {
+        dayWrapper.classList.add('hidden');
+        dayWrapper.classList.remove('flex', 'items-center', 'gap-2');
+      }
+
+      // Mood Emoji
+      const moodValue = document.getElementById('inputMood').value;
+      document.getElementById('previewMood').textContent = moodValue;
+
+      // 标签
+      const tagsValue = document.getElementById('inputTags').value;
+      const tags = tagsValue.split(/[,，\s]+/).filter(t => t.trim());
+      const tagsContainer = document.getElementById('previewTags');
+      if (tags.length > 0) {
+        tagsContainer.innerHTML = tags.map(tag => 
+          `<span class="px-2 py-0.5 border border-color text-xs font-medium rounded text-secondary">#${tag}</span>`
+        ).join('');
+      } else {
+        tagsContainer.innerHTML = '';
+      }
+
+      // 内容
+      const contentValue = document.getElementById('inputContent').value;
+      const lines = contentValue.split('\n').filter(line => line.trim());
+      const contentContainer = document.getElementById('previewContent');
+      if (lines.length > 0) {
+        let lastWasTitle = false;
+        contentContainer.innerHTML = lines.map((line, index) => {
+          const trimmedLine = line.trim();
+          // 判断是否是标题（以 # 开头）
+          if (trimmedLine.startsWith('#')) {
+            const titleText = trimmedLine.replace(/^#+\s*/, '');
+            const needsSpace = index > 0; // 非第一个标题前加空间
+            lastWasTitle = true;
+            return `
+              <li class="${needsSpace ? 'mt-6' : ''} first:mt-0">
+                <span class="text-base font-bold text-primary">${titleText}</span>
+              </li>
+            `;
+          } else {
+            // 普通内容行
+            lastWasTitle = false;
+            return `
+              <li class="flex items-baseline">
+                <span class="mr-2 text-accent">·</span>
+                <span class="text-base leading-relaxed text-secondary">${trimmedLine.replace(/^[•\-\*]\s*/, '')}</span>
+              </li>
+            `;
+          }
+        }).join('');
+      } else {
+        contentContainer.innerHTML = '<li class="text-muted text-sm">请在左侧输入今日内容...</li>';
+      }
+
+      // 金句
+      const quoteValue = document.getElementById('inputQuote').value;
+      document.getElementById('previewQuote').textContent = quoteValue || '等待输入或AI生成...';
+
+      // Slogan
+      const sloganValue = document.getElementById('inputSlogan').value;
+      document.getElementById('previewSlogan').textContent = sloganValue;
+
+      // 标题
+      const titleValue = document.getElementById('inputTitle').value || '每日印记';
+      document.getElementById('previewTitle').textContent = titleValue;
+
+      // 底部版权
+      const copyrightValue = document.getElementById('inputCopyright').value || 'REPORT';
+      const year = new Date().getFullYear();
+      document.getElementById('previewCopyright').textContent = `${year} © ${copyrightValue}`;
+    }
+
+    // ========== AI生成金句 ==========
+    async function generateQuote() {
+      const btn = document.getElementById('generateBtn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<svg class="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 生成中...';
+      btn.disabled = true;
+
+      try {
+        const content = document.getElementById('inputContent').value;
+        const tags = document.getElementById('inputTags').value;
+        const model = document.getElementById('selectModel').value || 'glm-4.7';
+        
+        const messages = [
+          {
+            role: 'user',
+            content: `根据以下今日内容，生成一句简短有力的"今日金句"（不超过30字），要求深刻、有启发性、适合发朋友圈。只返回金句本身，不要引号和解释。
+
+今日领域：${tags}
+今日内容：
+${content}`
+          }
+        ];
+
+        let response;
+        if (apiMode === 'custom' && customApiBase && customApiKey) {
+          // 使用用户自定义 API
+          response = await fetch(`${customApiBase}/v1/chat/completions`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${customApiKey}`
+            },
+            body: JSON.stringify({ model, messages, max_tokens: 100, temperature: 0.8 })
+          });
+        } else {
+          // 使用免费代理 API
+          response = await fetch(`${API_PROXY_BASE}/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages })
+          });
+        }
+
+        const data = await response.json();
+        
+        // 检查是否有错误
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        
+        if (data.choices && data.choices[0] && data.choices[0].message) {
+          const quote = data.choices[0].message.content.trim().replace(/^["「『]|["」』]$/g, '');
+          document.getElementById('inputQuote').value = quote;
+          updatePreview();
+        } else {
+          throw new Error('API返回格式错误');
+        }
+      } catch (error) {
+        console.error('生成金句失败:', error);
+        alert('生成失败，请重试。错误: ' + error.message);
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // ========== 导出图片 ==========
+    async function exportImage() {
+      const btn = document.getElementById('exportBtn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<svg class="animate-spin mr-2 -ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 导出中...';
+      btn.disabled = true;
+
+      try {
+        const element = document.getElementById('previewCard');
+        
+        // 使用 html-to-image 导出
+        const dataUrl = await htmlToImage.toJpeg(element, {
+          quality: 1,
+          pixelRatio: 4,
+          backgroundColor: null
+        });
+
+        // 创建下载链接
+        const link = document.createElement('a');
+        const dateValue = document.getElementById('inputDate').value;
+        link.download = `DailyMark-${dateValue}.jpg`;
+        link.href = dataUrl;
+        link.click();
+      } catch (error) {
+        console.error('导出失败:', error);
+        alert('导出失败，请重试');
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+  </script>
+
+</body>
+</html>
