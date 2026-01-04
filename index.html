@@ -501,14 +501,27 @@
         const data = await response.json();
         
         if (data.data && Array.isArray(data.data)) {
+          // 获取保存的模型选择
+          const savedModel = localStorage.getItem('dailymark_selected_model');
+          
           select.innerHTML = '';
           data.data.forEach((model, index) => {
             const option = document.createElement('option');
             option.value = model.id;
             option.textContent = model.id;
-            if (index === 0) option.selected = true;
+            // 如果有保存的模型且匹配，则选中
+            if (savedModel && model.id === savedModel) {
+              option.selected = true;
+            } else if (!savedModel && index === 0) {
+              option.selected = true;
+            }
             select.appendChild(option);
           });
+          
+          // 监听模型选择变化，保存用户选择
+          select.onchange = () => {
+            localStorage.setItem('dailymark_selected_model', select.value);
+          };
         }
       } catch (error) {
         console.error('加载模型失败:', error);
